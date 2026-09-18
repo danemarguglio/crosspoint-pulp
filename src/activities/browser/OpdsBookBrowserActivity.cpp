@@ -495,7 +495,10 @@ void OpdsBookBrowserActivity::downloadBook(const OpdsEntry& book) {
   filename.reserve(96);
   if (haveFolder) filename += folder;
   filename += '/';
-  filename += opdsBookFilename(book.author, book.title, static_cast<OpdsFilenameFormat>(SETTINGS.opdsFilenameFormat));
+  const auto format = static_cast<OpdsFilenameFormat>(SETTINGS.opdsFilenameFormat);
+  std::string leaf = format == OpdsFilenameFormat::ServerFilename ? opdsServerFilename(book.href) : std::string();
+  if (leaf.empty()) leaf = opdsBookFilename(book.author, book.title, format);
+  filename += leaf;
   LOG_DBG("OPDS", "Downloading: %s -> %s", downloadUrl.c_str(), filename.c_str());
 
   // The selected book data is now copied into the download URL, filename, and

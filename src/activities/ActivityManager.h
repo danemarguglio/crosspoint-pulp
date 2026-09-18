@@ -17,7 +17,7 @@
 class Activity;    // forward declaration
 class RenderLock;  // forward declaration
 
-enum class HomeMenuItem { NONE, FILE_BROWSER, LIBRARY, OPDS_BROWSER, FILE_TRANSFER, SETTINGS_MENU };
+enum class HomeMenuItem { NONE, FILE_BROWSER, LIBRARY, OPDS_BROWSER, PULP, FILE_TRANSFER, SETTINGS_MENU };
 
 /**
  * ActivityManager
@@ -87,6 +87,8 @@ class ActivityManager {
   void goToFileBrowser(std::string path = {});
   void goToLibrary();
   void goToBrowser();
+  // Pulp fork: shelf sync. silent = boot/wake auto-sync (status line only).
+  void goToPulpSync(bool silent, bool cleanHomeRefresh = false);
   void goToReader(std::string path, bool allowFastInitialRefresh = false);
   void goToSleep(bool fromTimeout = false);
   void goToBoot();

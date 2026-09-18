@@ -112,6 +112,11 @@ void FileBrowserActivity::loadFiles() {
   for (auto file = root.openNextFile(); file; file = root.openNextFile()) ++entryCount;
   root.rewindDirectory();
   files.reserve(entryCount);
+  // Newest-first needs each file's mtime as a secondary key; 4 bytes per entry,
+  // consumed by the sort. Only the books browser sorts this way.
+  const bool newestFirst = mode == Mode::Books && SETTINGS.fileBrowserNewestFirst != 0;
+  std::vector<uint32_t> mtimes;
+  if (newestFirst) mtimes.reserve(entryCount);
 
   for (auto file = root.openNextFile(); file; file = root.openNextFile()) {
     file.getName(fileNameBuffer.get(), NAME_BUFFER_SIZE);
@@ -123,22 +128,30 @@ void FileBrowserActivity::loadFiles() {
 
     if (isDirectory) {
       files.emplace_back(std::string(fileNameBuffer.get()) + "/");
+      if (newestFirst) mtimes.push_back(0);
     } else {
       std::string_view filename{fileNameBuffer.get()};
+      bool keep = false;
       if (mode == Mode::PickFirmware) {
         // Firmware picker: only show .bin files.
-        if (FsHelpers::checkFileExtension(filename, ".bin")) {
-          files.emplace_back(filename);
-        }
-      } else if (FsHelpers::hasEpubExtension(filename) || FsHelpers::hasXtcExtension(filename) ||
-                 FsHelpers::hasTxtExtension(filename) || FsHelpers::hasMarkdownExtension(filename) ||
-                 FsHelpers::hasBmpExtension(filename) || FsHelpers::hasPngExtension(filename)) {
+        keep = FsHelpers::checkFileExtension(filename, ".bin");
+      } else {
+        keep = FsHelpers::hasEpubExtension(filename) || FsHelpers::hasXtcExtension(filename) ||
+               FsHelpers::hasTxtExtension(filename) || FsHelpers::hasMarkdownExtension(filename) ||
+               FsHelpers::hasBmpExtension(filename) || FsHelpers::hasPngExtension(filename);
+      }
+      if (keep) {
         files.emplace_back(filename);
+        if (newestFirst) mtimes.push_back(file.modificationTime());
       }
     }
   }
   root.close();
-  FsHelpers::sortFileList(files);
+  if (newestFirst) {
+    FsHelpers::sortFileListNewestFirst(files, mtimes);
+  } else {
+    FsHelpers::sortFileList(files);
+  }
 }
 
 // fui::ListProps::rowProvider — formats row `index` from files[index] into the

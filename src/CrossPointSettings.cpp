@@ -179,6 +179,14 @@ bool CrossPointSettings::fromJson(JsonVariantConst doc) {
     }
   }
 
+  // Pulp fork: a pre-fork settings.json stores opdsFilenameFormat explicitly, so
+  // the new struct default never applies on its own. Flip it once.
+  if (!pulpForkMigrated) {
+    opdsFilenameFormat = 3;  // OpdsFilenameFormat::ServerFilename
+    pulpForkMigrated = 1;
+    needsResave = true;
+  }
+
   if (doc["sleepTimeoutMinutes"].isNull() && !doc["sleepTimeout"].isNull()) {
     const uint8_t legacyValue =
         clamp(doc["sleepTimeout"] | (uint8_t)SLEEP_10_MIN, SLEEP_TIMEOUT_COUNT, (uint8_t)SLEEP_10_MIN);

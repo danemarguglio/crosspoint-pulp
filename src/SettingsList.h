@@ -356,6 +356,15 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
                             "removeReadBooksFromRecents", StrId::STR_CAT_SYSTEM),
         SettingInfo::Toggle(StrId::STR_MOVE_FINISHED_TO_READ, &CrossPointSettings::moveFinishedToReadFolder,
                             "moveFinishedToReadFolder", StrId::STR_CAT_SYSTEM),
+        // Pulp fork: shelf sync + newest-first browsing.
+        SettingInfo::Toggle(StrId::STR_PULP_AUTO_SYNC, &CrossPointSettings::pulpAutoSync, "pulpAutoSync",
+                            StrId::STR_CAT_SYSTEM),
+        SettingInfo::Value(StrId::STR_PULP_AUTO_SYNC_MINUTES, &CrossPointSettings::pulpAutoSyncMinutes, {5, 240, 5},
+                           "pulpAutoSyncMinutes", StrId::STR_CAT_SYSTEM),
+        SettingInfo::Toggle(StrId::STR_FILE_BROWSER_NEWEST_FIRST, &CrossPointSettings::fileBrowserNewestFirst,
+                            "fileBrowserNewestFirst", StrId::STR_CAT_SYSTEM),
+        // Category-less: persisted only (see CrossPointSettings::pulpForkMigrated).
+        SettingInfo::Toggle(StrId::STR_PULP, &CrossPointSettings::pulpForkMigrated, "pulpForkMigrated"),
 
         // OPDS download folder: persisted + web-exposed, but category-less so it
         // is hidden from the on-device Settings screen (edited via OPDS UI).
@@ -363,9 +372,10 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
                             sizeof(SETTINGS.opdsDownloadFolder), "opdsDownloadFolder"),
         // OPDS download filename format: persisted + web-exposed, category-less so it
         // is hidden from the on-device Settings screen (cycled from the OPDS UI).
-        SettingInfo::Enum(StrId::STR_OPDS_FILENAME_FORMAT, &CrossPointSettings::opdsFilenameFormat,
-                          {StrId::STR_FMT_AUTHOR_TITLE, StrId::STR_FMT_TITLE_AUTHOR, StrId::STR_FMT_TITLE},
-                          "opdsFilenameFormat"),
+        SettingInfo::Enum(
+            StrId::STR_OPDS_FILENAME_FORMAT, &CrossPointSettings::opdsFilenameFormat,
+            {StrId::STR_FMT_AUTHOR_TITLE, StrId::STR_FMT_TITLE_AUTHOR, StrId::STR_FMT_TITLE, StrId::STR_FMT_SERVER},
+            "opdsFilenameFormat"),
 
         // Frontlight quick-panel state: persisted and web-exposed, but hidden
         // from the on-device Settings screen because the swipe panel owns it.

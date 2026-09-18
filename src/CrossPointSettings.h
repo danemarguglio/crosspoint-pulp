@@ -285,10 +285,23 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // OPDS server list. Persisted via a category-less SettingInfo::String in
   // SettingsList.h, so it stays out of the on-device Settings screen.
   char opdsDownloadFolder[64] = "";
-  // On-disk filename format for OPDS downloads (0=Author-Title default, 1=Title-Author,
-  // 2=Title). See OpdsFilenameFormat. Persisted via a category-less SettingInfo::Enum,
-  // edited from the OPDS server list; hidden from the on-device Settings screen.
-  uint8_t opdsFilenameFormat = 0;
+  // On-disk filename format for OPDS downloads (0=Author-Title, 1=Title-Author,
+  // 2=Title, 3=Server filename — the pulp fork default, so date-prefixed names
+  // survive the download). See OpdsFilenameFormat. Persisted via a category-less
+  // SettingInfo::Enum, edited from the OPDS server list; hidden from the on-device
+  // Settings screen.
+  uint8_t opdsFilenameFormat = 3;
+  // Pulp fork: one-shot marker. A settings.json written before the fork carries
+  // opdsFilenameFormat=0 explicitly; fromJson() flips it to the server-filename
+  // default once and sets this so a later user choice is respected.
+  uint8_t pulpForkMigrated = 0;
+  // Pulp fork: sync the Pulp shelf on boot/wake when the last run is older than
+  // pulpAutoSyncMinutes (bounded Wi-Fi attempt, skipped when no Wi-Fi is saved).
+  uint8_t pulpAutoSync = 1;
+  uint8_t pulpAutoSyncMinutes = 30;
+  // Pulp fork: file browser orders files by leading YYYY-MM-DD, then mtime,
+  // newest first (folders first, natural order). 0 = upstream alphabetical.
+  uint8_t fileBrowserNewestFirst = 1;
   // Hide battery percentage
   uint8_t hideBatteryPercentage = HIDE_NEVER;
   // Long-press page turn button behavior

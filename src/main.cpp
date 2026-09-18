@@ -6,6 +6,7 @@
 #include <GfxRenderer.h>
 #include <HalClock.h>
 #include <HalDisplay.h>
+#include <HalFileTime.h>
 #include <HalFrontlight.h>
 #include <HalGPIO.h>
 #include <HalMemory.h>
@@ -35,6 +36,7 @@
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "images/LoadingIcon.h"
+#include "network/PulpConfig.h"
 #include "platform/UsbSerialJtagHandoff.h"
 #include "util/ButtonNavigator.h"
 #include "util/ScreenshotUtil.h"
@@ -385,6 +387,7 @@ void setup() {
 
   halTiltSensor.begin();
   halClock.begin();
+  HalFileTime::begin();  // pulp fork: SD writes get real mtimes
 
 #if FREEINK_DEVICE_X4 || FREEINK_DEVICE_X3
   LOG_INF("MAIN", "Hardware detect: %s", gpio.deviceIsX3() ? "X3" : "X4");
@@ -551,7 +554,18 @@ void setup() {
              mappedInputManager.isPressed(MappedInputManager::Button::Back) || APP_STATE.readerActivityLoadCount > 0) {
     // Boot to home screen if no book is open, last sleep was not from reader, back button is held, or reader activity
     // crashed (indicated by readerActivityLoadCount > 0)
-    activityManager.goHome(HomeMenuItem::NONE, needsWakeRefresh);
+    //
+    // Pulp fork: when a home-bound boot/wake is due for a shelf sync, run it
+    // first and let it hand off to Home. Battery: one Wi-Fi burst (~10-20 s,
+    // ~5 s when nothing is new) per pulpAutoSyncMinutes of actual use; the
+    // 8 s connect bound keeps an absent network from ever stalling boot.
+    // Waking straight into a book skips it — the reader is where the user
+    // asked to be.
+    if (pulp::autoSyncDue()) {
+      activityManager.goToPulpSync(/*silent=*/true, needsWakeRefresh);
+    } else {
+      activityManager.goHome(HomeMenuItem::NONE, needsWakeRefresh);
+    }
   } else {
     // Clear app state to avoid getting into a boot loop if the epub doesn't load
     const auto path = APP_STATE.openEpubPath;

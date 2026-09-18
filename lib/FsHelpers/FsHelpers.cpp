@@ -138,6 +138,50 @@ void sortFileList(std::vector<std::string>& strs) {
   });
 }
 
+uint32_t leadingDateKey(const std::string_view name) {
+  if (name.size() < 10 || name[4] != '-' || name[7] != '-') return 0;
+  for (const size_t i : {0u, 1u, 2u, 3u, 5u, 6u, 8u, 9u}) {
+    if (!isdigit(static_cast<unsigned char>(name[i]))) return 0;
+  }
+  const auto digit = [&name](const size_t i) { return static_cast<uint32_t>(name[i] - '0'); };
+  const uint32_t year = digit(0) * 1000 + digit(1) * 100 + digit(2) * 10 + digit(3);
+  const uint32_t month = digit(5) * 10 + digit(6);
+  const uint32_t day = digit(8) * 10 + digit(9);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return 0;
+  return year * 10000 + month * 100 + day;
+}
+
+void sortFileListNewestFirst(std::vector<std::string>& strs, std::vector<uint32_t>& mtimes) {
+  const size_t n = strs.size();
+  if (mtimes.size() != n) {
+    mtimes.clear();
+    sortFileList(strs);
+    return;
+  }
+  // Index sort so the strings move exactly once; keys/order are 8 bytes per
+  // entry and freed on return.
+  std::vector<uint32_t> keys(n);
+  std::vector<uint32_t> order(n);
+  for (size_t i = 0; i < n; i++) {
+    keys[i] = leadingDateKey(strs[i]);
+    order[i] = static_cast<uint32_t>(i);
+  }
+  std::sort(order.begin(), order.end(), [&](const uint32_t a, const uint32_t b) {
+    const bool isDirA = strs[a].back() == '/';
+    const bool isDirB = strs[b].back() == '/';
+    if (isDirA != isDirB) return isDirA;
+    if (isDirA) return naturalLess(strs[a], strs[b]);
+    if (keys[a] != keys[b]) return keys[a] > keys[b];
+    if (mtimes[a] != mtimes[b]) return mtimes[a] > mtimes[b];
+    return naturalLess(strs[a], strs[b]);
+  });
+  std::vector<std::string> sorted;
+  sorted.reserve(n);
+  for (const uint32_t i : order) sorted.push_back(std::move(strs[i]));
+  strs.swap(sorted);
+  mtimes.clear();
+}
+
 bool checkFileExtension(std::string_view fileName, const char* extension) {
   const size_t extLen = strlen(extension);
   if (fileName.length() < extLen) {

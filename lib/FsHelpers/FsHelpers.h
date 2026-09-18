@@ -1,6 +1,7 @@
 #pragma once
 #include <WString.h>
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -16,6 +17,16 @@ std::string normalisePath(const std::string& path);
 bool naturalLess(const std::string& str1, const std::string& str2);
 
 void sortFileList(std::vector<std::string>& strs);
+
+// Leading "YYYY-MM-DD" of a name as a comparable key (YYYYMMDD); 0 when absent.
+uint32_t leadingDateKey(std::string_view name);
+
+// Newest-first ordering: directories first (natural order), then files by
+// leadingDateKey descending, then `mtimes` descending (parallel to strs; FAT
+// date<<16|time as HalFile::modificationTime() returns it, 0 = unknown), then
+// natural order. `mtimes` is cleared on return. Falls back to sortFileList when
+// the two vectors disagree in size.
+void sortFileListNewestFirst(std::vector<std::string>& strs, std::vector<uint32_t>& mtimes);
 
 /**
  * Check if the given filename ends with the specified extension (case-insensitive).

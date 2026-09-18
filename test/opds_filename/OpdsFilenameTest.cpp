@@ -49,4 +49,23 @@ TEST(OpdsFilename, UnknownFormatValueFallsBackToAuthorTitle) {
   EXPECT_EQ(opdsBookFilename("J. Doe", "My Book", bogus), "J. Doe - My Book.epub");
 }
 
+TEST(OpdsFilename, ServerFilenameKeepsDatePrefixedBasename) {
+  EXPECT_EQ(opdsServerFilename("http://192.168.1.50:8794/books/2026-09-18-some-article.epub"),
+            "2026-09-18-some-article.epub");
+}
+
+TEST(OpdsFilename, ServerFilenameDecodesAndSanitizes) {
+  EXPECT_EQ(opdsServerFilename("/books/2026-09-18-a%20b%3Fc.epub?token=1#x"), "2026-09-18-a b_c.epub");
+}
+
+TEST(OpdsFilename, ServerFilenameAppendsExtensionAndHandlesEmpty) {
+  EXPECT_EQ(opdsServerFilename("http://host/dl/12345"), "12345.epub");
+  EXPECT_EQ(opdsServerFilename("http://host/"), "");
+  EXPECT_EQ(opdsServerFilename(""), "");
+}
+
+TEST(OpdsFilename, ServerFilenameFormatFallsBackToAuthorTitleInLegacyHelper) {
+  EXPECT_EQ(opdsBookFilename("J. Doe", "My Book", OpdsFilenameFormat::ServerFilename), "J. Doe - My Book.epub");
+}
+
 }  // namespace

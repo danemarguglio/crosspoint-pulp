@@ -19,6 +19,7 @@
 #include "home/HomeActivity.h"
 #include "library/LibraryListActivity.h"
 #include "network/CrossPointWebServerActivity.h"
+#include "network/PulpSyncActivity.h"
 #include "network/UsbDriveActivity.h"
 #include "reader/ReaderActivity.h"
 #include "settings/OpdsServerListActivity.h"
@@ -268,6 +269,16 @@ void ActivityManager::goToBrowser() {
   }
 }
 
+void ActivityManager::goToPulpSync(const bool silent, const bool cleanHomeRefresh) {
+  auto activity = makeUniqueNoThrow<PulpSyncActivity>(renderer, mappedInput, silent, cleanHomeRefresh);
+  if (!activity) {
+    LOG_ERR("ACT", "OOM: pulp sync activity");
+    goHome(HomeMenuItem::NONE, cleanHomeRefresh);
+    return;
+  }
+  replaceActivity(std::move(activity));
+}
+
 void ActivityManager::goToReader(std::string path, const bool allowFastInitialRefresh) {
   if (path.empty()) {
     goToFileBrowser("/");
@@ -310,6 +321,8 @@ void ActivityManager::goHome(HomeMenuItem initialMenuItem, bool cleanInitialRefr
       initialMenuItem = HomeMenuItem::LIBRARY;
     } else if (activityName == "OpdsBookBrowser") {
       initialMenuItem = HomeMenuItem::OPDS_BROWSER;
+    } else if (activityName == "PulpSync") {
+      initialMenuItem = HomeMenuItem::PULP;
     } else if (activityName == "CrossPointWebServer") {
       initialMenuItem = HomeMenuItem::FILE_TRANSFER;
     } else if (activityName == "Settings") {
