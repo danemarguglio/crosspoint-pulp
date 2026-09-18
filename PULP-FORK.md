@@ -5,7 +5,7 @@ for an Xteink X4 Pro that pulls its reading queue from a local **pulp** server
 (`pulp`, FastAPI, port 8794: tabs → EPUB). Upstream's ROADMAP
 excludes sync engines and auto-download by design, so this lives here.
 
-Branch: `pulp` off upstream `develop` @ `4b17a7bb`. Build target: `pio run -e x4pro`.
+Branch: `pulp` off upstream `develop` @ `4b17a7bb` (version 1.6.5). Build target: `pio run -e x4pro` → `CROSSPOINT_VERSION` `1.6.5-x4pro`.
 
 ## What changed
 
