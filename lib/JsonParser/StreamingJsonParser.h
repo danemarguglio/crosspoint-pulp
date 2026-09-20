@@ -14,6 +14,11 @@ struct JsonCallbacks {
   void (*onObjectEnd)(void* ctx);
   void (*onArrayStart)(void* ctx);
   void (*onArrayEnd)(void* ctx);
+  // Optional. When set, string VALUES arrive here instead of onString, in one
+  // or more pieces of at most TOKEN_BUF_SIZE-1 bytes (`last` marks the final
+  // piece), so values longer than the token buffer stream through instead of
+  // being dropped. Keys still arrive whole via onKey.
+  void (*onStringPart)(void* ctx, const char* value, size_t len, bool last) = nullptr;
 };
 
 class StreamingJsonParser {

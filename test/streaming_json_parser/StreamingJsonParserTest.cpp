@@ -504,3 +504,48 @@ TEST(StreamingJsonParser, NullCallbacksNoCrash) {
   parser.feed(json, strlen(json));
   EXPECT_FALSE(parser.hasError());
 }
+
+namespace {
+struct PartContext {
+  std::vector<std::string> parts;
+  std::vector<bool> lasts;
+  std::vector<Event> other;
+};
+void onPartKey(void* ctx, const char* key, size_t len) {
+  static_cast<PartContext*>(ctx)->other.push_back({EventType::KEY, std::string(key, len)});
+}
+void onPartString(void* ctx, const char* value, size_t len) {
+  static_cast<PartContext*>(ctx)->other.push_back({EventType::STRING, std::string(value, len)});
+}
+void onPart(void* ctx, const char* value, size_t len, bool last) {
+  auto* c = static_cast<PartContext*>(ctx);
+  c->parts.emplace_back(value, len);
+  c->lasts.push_back(last);
+}
+}  // namespace
+
+TEST(StreamingJsonParser, StringPartCallbackStreamsLongValues) {
+  PartContext ctx;
+  JsonCallbacks cb{&ctx, onPartKey, onPartString, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+  cb.onStringPart = onPart;
+  StreamingJsonParser parser(cb);
+  const std::string longValue(StreamingJsonParser::TOKEN_BUF_SIZE * 2 + 10, 'a');
+  const std::string json = "{\"k\":\"" + longValue + "\",\"s\":\"short\"}";
+  parser.feed(json.data(), json.size());
+  ASSERT_FALSE(parser.hasError());
+  // Values never reach onString once onStringPart is set; keys still do onKey.
+  ASSERT_EQ(ctx.other.size(), 2u);
+  EXPECT_EQ(ctx.other[0].type, EventType::KEY);
+  EXPECT_EQ(ctx.other[1].value, "s");
+  ASSERT_GE(ctx.parts.size(), 3u);
+  std::string joined;
+  size_t lastCount = 0;
+  for (size_t i = 0; i + 1 < ctx.parts.size(); i++) {
+    joined += ctx.parts[i];
+    if (ctx.lasts[i]) lastCount++;
+  }
+  EXPECT_EQ(lastCount, 1u);  // the long value ended once; the rest belongs to "short"
+  EXPECT_EQ(joined, longValue);
+  EXPECT_EQ(ctx.parts.back(), "short");
+  EXPECT_TRUE(ctx.lasts.back());
+}
