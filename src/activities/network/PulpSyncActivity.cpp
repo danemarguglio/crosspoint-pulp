@@ -80,10 +80,16 @@ void PulpSyncActivity::onExit() {
     WiFi.mode(WIFI_OFF);
     delay(30);
     LOG_INF("PULP", "free heap after sync: %u", ESP.getFreeHeap());
-    // Manual runs follow the OPDS browser: reboot to defragment the heap after
-    // a Wi-Fi/HTTP session. The boot-time auto-sync skips it — the heap is
-    // fresh, and a second boot would double the wake time.
-    if (!silent) silentRestart();
+    // Upstream's OPDS browser reboots here to defragment the heap after a
+    // Wi-Fi/HTTP session — a C3 (no PSRAM, ~380 KB) habit. On the X4 Pro (S3,
+    // 8 MB PSRAM) it cost a visible ~10 s reboot after every manual sync that
+    // read as a crash (2026-09-20). Only do it when the heap actually
+    // looks fragmented: the largest free block below what a reader session
+    // needs (~48 KB framebuffer-class allocation).
+    if (!silent && ESP.getMaxAllocHeap() < 60000) {
+      LOG_INF("PULP", "fragmented heap (max block %u) — restarting", ESP.getMaxAllocHeap());
+      silentRestart();
+    }
   }
 }
 
