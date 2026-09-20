@@ -55,6 +55,52 @@ Branch: `pulp` off upstream `develop` @ `4b17a7bb` (version 1.6.5). Build target
   (`pulpForkMigrated`). Books pulled via the OPDS browser and via Pulp sync
   therefore land under the same name and dedupe against each other.
 
+### 3. Hacker News reader (2026-09-20)
+- **Home → "Hacker News"** (right after Pulp, shown under the same condition)
+  runs `HnFeedActivity`: headless join of a saved network (`SavedWifiJoiner`,
+  the PulpSync recipe), then `GET <pulp>/hn/feed?kind=…&page=…&per=30`. Tabs
+  **Top · New · Best · Ask · Show** on the `UiTabListActivity` ring; rows are a
+  two-line title plus `123 pts · 45 comments · example.com · 3h`; `« Previous
+  page` / `More…` rows at the ends, and the side buttons page when the
+  selection runs off either end. Back/Home tears Wi-Fi down with the OPDS
+  browser's heap-defrag reboot.
+- **Story** (`HnStoryActivity`, pushed on top of the feed so Wi-Fi stays up):
+  header (title, meta), a six-button toolbar `Save · Thread › · < · > ·
+  Article · Comments`, and the body. **Article** = `article.paragraphs` (or
+  Ask HN `text`) laid out with the reader engine (`ParsedText` → `TextBlock`,
+  reader font/alignment) and paged; `article.ok=false` shows the reason and
+  points at Comments. **Comments** = depth-first order indented 12 px per
+  level (visual depth capped at 6, `»` beyond), a thread line per level,
+  `author · age` in the small font, bodies wrapped in Noto Sans 14. Screen
+  pages fill from a cursor into the flattened list; one API page (40) is
+  resident, forward paging fetches the next, back paging re-lays remembered
+  starts. Confirm on a comment folds/unfolds its subtree (`[+N]`, `+` when
+  the subtree runs past the loaded page); `Thread ›` jumps to the next
+  top-level comment; `Save` POSTs `/hn/save/{id}` → "Saved to Pulp".
+- **Buttons** (X4 Pro: two side keys + power-click Confirm + touch): Up/Down
+  walk the ring (toolbar buttons, then body items); Down past the last body
+  item = next page, Up from the first = toolbar; a held side key pages; taps
+  hit the same targets; swipe left/right pages; back gesture = feed.
+- **Memory**: heap (+PSRAM) logged on entering each screen and after every
+  fetch (`HN` tag). Fetches refuse below 28 KB free / 8 KB max block
+  (`hn::MIN_FETCH_*` — plain http, so no TLS record buffer; the socket, the
+  1 KB read chunk, the parser's 512 B token buffer and one parsed page have
+  to fit). Comment text is capped at 4 KB each, a page at 64 comments, an
+  article at 32 KB / 256 paragraphs. `StreamingJsonParser` gained an
+  optional `onStringPart` callback so values longer than its 512 B token
+  buffer stream through instead of being dropped (existing callers unchanged).
+- Server contract (pulp `/hn/*`, fixed): `GET /hn/feed?kind&page&per` →
+  `{kind,page,per,has_more,items:[{id,title,url,domain,points,by,age,comments,kind}]}`;
+  `GET /hn/item/{id}?page&per&article=0|1` → `{id,title,url,domain,points,by,age,kind,
+  comments_total,text,article?{ok,title,byline,paragraphs[],truncated,error},
+  comments:[{id,by,age,depth,text,dead,kids}],page,per,has_more}` (comments
+  already in reading order; `article` only when `article=1`);
+  `POST /hn/save/{id}` → `{queued,key,title}`; `GET /hn/health`.
+- Known limit: the Home menu draws rows at a fixed pitch, so with an OPDS
+  server configured (7 rows: Browse, Library, OPDS, Pulp, Hacker News,
+  Transfer, Settings) the Lyra/Classic portrait menu runs ~50 px into the
+  button hints. Six rows (no OPDS entry) fit.
+
 ## Files
 
 New:
@@ -62,6 +108,13 @@ New:
 - `src/network/PulpConfig.{h,cpp}` — URL resolution, auto-sync gate + RTC-memory stamp
 - `src/network/PulpShelf.{h,cpp}` — `/api/shelf` fetch through `StreamingJsonParser`
 - `lib/hal/HalFileTime.{h,cpp}` — SdFat timestamp callback
+- `src/activities/hn/HnFeedActivity.{h,cpp}` — the tabbed front page
+- `src/activities/hn/HnStoryActivity.{h,cpp}` — article + threaded comments
+- `src/activities/hn/HnTextLayout.{h,cpp}` — plain text → `TextBlock` lines via `ParsedText`
+- `src/network/HnJson.{h,cpp}` — models + streaming sinks (host-testable)
+- `src/network/HnClient.{h,cpp}` — the three `/hn` calls, heap floor
+- `src/network/SavedWifiJoiner.{h,cpp}` — headless saved-network join
+- `test/hn_json/` — host tests for the feed/item shapes, `has_more`, depth, long strings
 - `PULP-FORK.md` (this file)
 
 Modified (small, localized):
@@ -73,15 +126,17 @@ Modified (small, localized):
 - `src/activities/settings/OpdsServerListActivity.cpp` — label + picker entry
 - `lib/FsHelpers/FsHelpers.{h,cpp}` — `leadingDateKey()`, `sortFileListNewestFirst()`
 - `src/activities/home/FileBrowserActivity.cpp` — collect mtimes, pick the sort
-- `src/activities/home/HomeActivity.{h,cpp}` — the Pulp menu item
-- `src/activities/ActivityManager.{h,cpp}` — `HomeMenuItem::PULP`, `goToPulpSync()`
+- `src/activities/home/HomeActivity.{h,cpp}` — the Pulp and Hacker News menu items
+- `src/activities/ActivityManager.{h,cpp}` — `HomeMenuItem::PULP` / `HACKER_NEWS`, `goToPulpSync()`, `goToHackerNews()`
+- `lib/JsonParser/StreamingJsonParser.{h,cpp}` — optional `onStringPart` (long string values); `test/streaming_json_parser/` covers it
 - `src/main.cpp` — `HalFileTime::begin()`, boot-route hook for auto-sync
-- `lib/I18n/translations/english.yaml` — `STR_PULP*`, `STR_FILE_BROWSER_NEWEST_FIRST`, `STR_FMT_SERVER`
+- `lib/I18n/translations/english.yaml` — `STR_PULP*`, `STR_HN*`, `STR_FILE_BROWSER_NEWEST_FIRST`, `STR_FMT_SERVER`
 - `platformio.ini` — `-DPULP_DEFAULT_URL` on `[env:x4pro]`
 - `test/opds_filename/OpdsFilenameTest.cpp`, `test/fs_helpers/FsHelpersTest.cpp` — host tests for the new helpers
 
 Server side (separate repo, `pulp`): `GET /api/shelf` →
-`[{"file","url","size","mtime"}, …]` newest first, same set as `/opds`.
+`[{"file","url","size","mtime"}, …]` newest first, same set as `/opds`; the
+`/hn/*` proxy described above.
 
 ## Rebasing on upstream
 
@@ -92,8 +147,10 @@ git rebase origin/develop      # the fork branches from develop, per AGENTS.md
 Expected conflict surface: `HomeActivity.{h,cpp}` (menu order), `SettingsList.h`
 (System block), `CrossPointSettings.h` (field block), `main.cpp` (boot routing),
 `english.yaml` (appended keys). Everything else is additive. After a rebase:
-`./bin/clang-format-fix -g`, `pio run -e x4pro`, and the two host tests
-(`cmake -S test -B build && cmake --build build --target OpdsFilenameTest FsHelpersTest`).
+`./bin/clang-format-fix -g`, `pio run -e x4pro`, and the host tests
+(`cmake -S test -B build && cmake --build build --target OpdsFilenameTest FsHelpersTest HnJsonTest StreamingJsonParserTest`).
+The wrapper wants clang-format ≥ 21; `pip install clang-format` into the venv and
+prefix `PATH=<venv>/bin:$PATH` if none is on the path.
 
 ## OTA from pulp (not built, investigated)
 
