@@ -124,9 +124,12 @@ TEST(HnJson, LongStringsStreamThroughTokenBuffer) {
   // Comment text and paragraphs routinely exceed the 512-byte token buffer.
   const std::string longText(1500, 'x');
   const std::string para(900, 'p');
-  std::string json = R"({"id":7,"title":"T","url":"","domain":"","points":1,"by":"u","age":"1h","kind":"story","comments_total":1,)";
-  json += R"("text":"","article":{"ok":true,"title":"A","byline":"","paragraphs":[")" + para + R"("],"truncated":false,"error":""},)";
-  json += R"("comments":[{"id":8,"by":"long","age":"1h","depth":0,"text":")" + longText + R"(","dead":false,"kids":0}],)";
+  std::string json =
+      R"({"id":7,"title":"T","url":"","domain":"","points":1,"by":"u","age":"1h","kind":"story","comments_total":1,)";
+  json += R"("text":"","article":{"ok":true,"title":"A","byline":"","paragraphs":[")" + para +
+          R"("],"truncated":false,"error":""},)";
+  json +=
+      R"("comments":[{"id":8,"by":"long","age":"1h","depth":0,"text":")" + longText + R"(","dead":false,"kids":0}],)";
   json += R"("page":1,"per":40,"has_more":false})";
 
   hn::Item item;
@@ -146,9 +149,12 @@ TEST(HnJson, LongStringsStreamThroughTokenBuffer) {
 
 TEST(HnJson, CommentTextCapMarksNothingButKeepsGoing) {
   const std::string huge(hn::MAX_COMMENT_TEXT + 500, 'y');
-  std::string json = R"({"id":7,"title":"T","url":"","domain":"","points":1,"by":"u","age":"1h","kind":"story","comments_total":2,)";
-  json += R"("text":"","comments":[{"id":8,"by":"a","age":"1h","depth":0,"text":")" + huge + R"(","dead":false,"kids":0},)";
-  json += R"({"id":9,"by":"b","age":"1h","depth":0,"text":"after","dead":false,"kids":0}],"page":1,"per":40,"has_more":false})";
+  std::string json =
+      R"({"id":7,"title":"T","url":"","domain":"","points":1,"by":"u","age":"1h","kind":"story","comments_total":2,)";
+  json +=
+      R"("text":"","comments":[{"id":8,"by":"a","age":"1h","depth":0,"text":")" + huge + R"(","dead":false,"kids":0},)";
+  json +=
+      R"({"id":9,"by":"b","age":"1h","depth":0,"text":"after","dead":false,"kids":0}],"page":1,"per":40,"has_more":false})";
   hn::Item item;
   ASSERT_TRUE(hn::parseItem(json.data(), json.size(), item));
   ASSERT_EQ(item.comments.size(), 2u);

@@ -32,7 +32,7 @@ int HomeActivity::getMenuItemCount() const {
     count++;
   }
   if (hasPulp) {
-    count++;
+    count += 2;  // Pulp, Hacker News
   }
   return count;
 }
@@ -197,6 +197,9 @@ void HomeActivity::loop() {
       case HomeMenuItem::PULP:
         onPulpOpen();
         break;
+      case HomeMenuItem::HACKER_NEWS:
+        onHackerNewsOpen();
+        break;
       case HomeMenuItem::FILE_TRANSFER:
         onFileTransferOpen();
         break;
@@ -326,6 +329,8 @@ void HomeActivity::render(RenderLock&&) {
     const int pulpPos = hasOpdsServers ? 3 : 2;
     menuItems.insert(menuItems.begin() + pulpPos, tr(STR_PULP));
     menuIcons.insert(menuIcons.begin() + pulpPos, Recent);
+    menuItems.insert(menuItems.begin() + pulpPos + 1, tr(STR_HN));
+    menuIcons.insert(menuIcons.begin() + pulpPos + 1, Text);
   }
 
   if (metrics.homeContinueReadingInMenu && !recentBooks.empty()) {
@@ -372,3 +377,5 @@ void HomeActivity::onFileTransferOpen() { activityManager.goToFileTransfer(); }
 void HomeActivity::onOpdsBrowserOpen() { activityManager.goToBrowser(); }
 
 void HomeActivity::onPulpOpen() { activityManager.goToPulpSync(/*silent=*/false); }
+
+void HomeActivity::onHackerNewsOpen() { activityManager.goToHackerNews(); }

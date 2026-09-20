@@ -14,6 +14,7 @@
 #include "boot_sleep/BootActivity.h"
 #include "boot_sleep/SleepActivity.h"
 #include "browser/OpdsBookBrowserActivity.h"
+#include "hn/HnFeedActivity.h"
 #include "home/CrashActivity.h"
 #include "home/FileBrowserActivity.h"
 #include "home/HomeActivity.h"
@@ -279,6 +280,15 @@ void ActivityManager::goToPulpSync(const bool silent, const bool cleanHomeRefres
   replaceActivity(std::move(activity));
 }
 
+void ActivityManager::goToHackerNews() {
+  auto activity = makeUniqueNoThrow<HnFeedActivity>(renderer, mappedInput);
+  if (!activity) {
+    LOG_ERR("ACT", "OOM: hacker news activity");
+    return;
+  }
+  replaceActivity(std::move(activity));
+}
+
 void ActivityManager::goToReader(std::string path, const bool allowFastInitialRefresh) {
   if (path.empty()) {
     goToFileBrowser("/");
@@ -323,6 +333,8 @@ void ActivityManager::goHome(HomeMenuItem initialMenuItem, bool cleanInitialRefr
       initialMenuItem = HomeMenuItem::OPDS_BROWSER;
     } else if (activityName == "PulpSync") {
       initialMenuItem = HomeMenuItem::PULP;
+    } else if (activityName == "HnFeed") {
+      initialMenuItem = HomeMenuItem::HACKER_NEWS;
     } else if (activityName == "CrossPointWebServer") {
       initialMenuItem = HomeMenuItem::FILE_TRANSFER;
     } else if (activityName == "Settings") {

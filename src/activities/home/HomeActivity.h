@@ -16,7 +16,7 @@ class HomeActivity final : public Activity {
   bool recentsLoaded = false;
   bool firstRenderDone = false;
   bool hasOpdsServers = false;
-  bool hasPulp = false;            // pulp fork: a Pulp URL resolves (see pulp::baseUrl)
+  bool hasPulp = false;            // pulp fork: a Pulp URL resolves (see pulp::baseUrl); also gates Hacker News
   bool coverRendered = false;      // Track if cover has been rendered once
   bool coverBufferStored = false;  // Track if cover buffer is stored
   uint8_t* coverBuffer = nullptr;  // HomeActivity's own buffer for cover image
@@ -43,6 +43,8 @@ class HomeActivity final : public Activity {
     if (hasOpdsUrl) ++i;
     if (item == HomeMenuItem::PULP) return hasPulp ? i : 0;
     if (hasPulp) ++i;
+    if (item == HomeMenuItem::HACKER_NEWS) return hasPulp ? i : 0;
+    if (hasPulp) ++i;
     if (item == HomeMenuItem::FILE_TRANSFER) return i;
     ++i;
     if (item == HomeMenuItem::SETTINGS_MENU) return i;
@@ -56,6 +58,7 @@ class HomeActivity final : public Activity {
     if (idx == i++) return HomeMenuItem::LIBRARY;
     if (hasOpdsUrl && idx == i++) return HomeMenuItem::OPDS_BROWSER;
     if (hasPulp && idx == i++) return HomeMenuItem::PULP;
+    if (hasPulp && idx == i++) return HomeMenuItem::HACKER_NEWS;
     if (idx == i++) return HomeMenuItem::FILE_TRANSFER;
     if (idx == i) return HomeMenuItem::SETTINGS_MENU;
     return HomeMenuItem::NONE;
@@ -67,6 +70,7 @@ class HomeActivity final : public Activity {
   void onFileTransferOpen();
   void onOpdsBrowserOpen();
   void onPulpOpen();
+  void onHackerNewsOpen();
 
   int getMenuItemCount() const;
   bool storeCoverBuffer();    // Store frame buffer for cover image

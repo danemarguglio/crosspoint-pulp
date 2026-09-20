@@ -57,7 +57,8 @@ FeedSink::FeedSink(Feed& o) : out(o) {
 }
 
 JsonCallbacks FeedSink::callbacks() {
-  JsonCallbacks cb{this, onKey, nullptr, onNumber, onBool, onNull, onObjectStart, onObjectEnd, onArrayStart, onArrayEnd};
+  JsonCallbacks cb{this,   onKey,         nullptr,     onNumber,     onBool,
+                   onNull, onObjectStart, onObjectEnd, onArrayStart, onArrayEnd};
   cb.onStringPart = onStringPart;
   return cb;
 }
@@ -188,7 +189,8 @@ ItemSink::ItemSink(Item& o) : out(o) {
 }
 
 JsonCallbacks ItemSink::callbacks() {
-  JsonCallbacks cb{this, onKey, nullptr, onNumber, onBool, onNull, onObjectStart, onObjectEnd, onArrayStart, onArrayEnd};
+  JsonCallbacks cb{this,   onKey,         nullptr,     onNumber,     onBool,
+                   onNull, onObjectStart, onObjectEnd, onArrayStart, onArrayEnd};
   cb.onStringPart = onStringPart;
   return cb;
 }
@@ -268,13 +270,26 @@ void ItemSink::onKey(void* ctx, const char* key, const size_t len) {
     Key key;
   };
   static constexpr Entry TABLE[] = {
-      {"id", Key::ID},           {"title", Key::TITLE},     {"url", Key::URL},
-      {"domain", Key::SITE},   {"by", Key::BY},           {"age", Key::AGE},
-      {"points", Key::POINTS},   {"comments_total", Key::COMMENTS_TOTAL},
-      {"text", Key::TEXT},       {"page", Key::PAGE},       {"has_more", Key::HAS_MORE},
-      {"article", Key::ARTICLE}, {"comments", Key::COMMENTS}, {"ok", Key::OK},
-      {"byline", Key::BYLINE},   {"paragraphs", Key::PARAGRAPHS}, {"truncated", Key::TRUNCATED},
-      {"error", Key::ERROR_TEXT},     {"depth", Key::DEPTH},     {"dead", Key::DEAD},
+      {"id", Key::ID},
+      {"title", Key::TITLE},
+      {"url", Key::URL},
+      {"domain", Key::SITE},
+      {"by", Key::BY},
+      {"age", Key::AGE},
+      {"points", Key::POINTS},
+      {"comments_total", Key::COMMENTS_TOTAL},
+      {"text", Key::TEXT},
+      {"page", Key::PAGE},
+      {"has_more", Key::HAS_MORE},
+      {"article", Key::ARTICLE},
+      {"comments", Key::COMMENTS},
+      {"ok", Key::OK},
+      {"byline", Key::BYLINE},
+      {"paragraphs", Key::PARAGRAPHS},
+      {"truncated", Key::TRUNCATED},
+      {"error", Key::ERROR_TEXT},
+      {"depth", Key::DEPTH},
+      {"dead", Key::DEAD},
       {"kids", Key::KIDS},
   };
   s->key = Key::OTHER;
@@ -294,7 +309,8 @@ void ItemSink::onStringPart(void* ctx, const char* value, const size_t len, cons
   if (s->section() == Section::PARAGRAPHS) {
     // One paragraph complete. The whole-article byte cap keeps a runaway page
     // from filling the heap; the server also truncates on its side.
-    if (s->out.article.paragraphs.size() < MAX_PARAGRAPHS && s->articleBytes + s->paragraph.size() <= MAX_ARTICLE_TEXT) {
+    if (s->out.article.paragraphs.size() < MAX_PARAGRAPHS &&
+        s->articleBytes + s->paragraph.size() <= MAX_ARTICLE_TEXT) {
       s->articleBytes += s->paragraph.size();
       s->out.article.paragraphs.push_back(std::move(s->paragraph));
     } else {
