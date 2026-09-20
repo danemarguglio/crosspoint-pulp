@@ -56,6 +56,11 @@ OpdsServer pulp::server() {
   return OpdsServer{};
 }
 
+bool pulp::opdsBrowserSuperseded() {
+  const auto& servers = OPDS_STORE.getServers();
+  return servers.size() == 1 && nameIsPulp(servers[0].name);
+}
+
 bool pulp::autoSyncDue() {
   if (!SETTINGS.pulpAutoSync) return false;
   if (baseUrl().empty()) return false;

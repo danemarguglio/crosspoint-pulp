@@ -117,7 +117,11 @@ void HomeActivity::loadRecentCovers(int coverHeight) {
 void HomeActivity::onEnter() {
   Activity::onEnter();
 
-  hasOpdsServers = OPDS_STORE.hasServers();
+  // Row set for the whole screen: getMenuItemCount(), menuItemToIndex() and
+  // indexToMenuItem() all derive from these two flags. The OPDS Browser row is
+  // hidden when the Pulp item covers the only server (pulp fork); an initial
+  // OPDS_BROWSER selection then maps to row 0 in menuItemToIndex().
+  hasOpdsServers = OPDS_STORE.hasServers() && !pulp::opdsBrowserSuperseded();
   hasPulp = !pulp::baseUrl().empty();
 
   const auto& metrics = UITheme::getInstance().getMetrics();

@@ -14,6 +14,11 @@ std::string baseUrl();
 // The "Pulp" OPDS entry when present (for its credentials), else an empty one.
 OpdsServer server();
 
+// True when the only configured OPDS server is the "Pulp" entry: the Home
+// "Pulp" item supersedes the OPDS Browser row, so Home hides it. Any other
+// server configured brings the row back.
+bool opdsBrowserSuperseded();
+
 // True when auto-sync is enabled, a Pulp URL and a saved Wi-Fi network exist,
 // and the last attempt is older than pulpAutoSyncMinutes (or unknown, or the
 // clock moved backwards since).

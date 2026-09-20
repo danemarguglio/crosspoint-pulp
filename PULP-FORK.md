@@ -96,16 +96,20 @@ Branch: `pulp` off upstream `develop` @ `4b17a7bb` (version 1.6.5). Build target
   comments:[{id,by,age,depth,text,dead,kids}],page,per,has_more}` (comments
   already in reading order; `article` only when `article=1`);
   `POST /hn/save/{id}` → `{queued,key,title}`; `GET /hn/health`.
-- Known limit: the Home menu draws rows at a fixed pitch, so with an OPDS
-  server configured (7 rows: Browse, Library, OPDS, Pulp, Hacker News,
-  Transfer, Settings) the Lyra/Classic portrait menu runs ~50 px into the
-  button hints. Six rows (no OPDS entry) fit.
+- Home rows: the menu draws at a fixed pitch and seven rows would run into
+  the button hints, so the **OPDS Browser row is hidden when the only
+  configured OPDS server is the "Pulp" entry** (`pulp::opdsBrowserSuperseded()`
+  — the Pulp item covers it). Any other server configured brings it back
+  (seven rows, Lyra/Classic portrait overflows ~50 px). `hasOpdsServers` /
+  `hasPulp` in `HomeActivity` drive `getMenuItemCount()`, `menuItemToIndex()`
+  and `indexToMenuItem()` alike; an initial OPDS_BROWSER selection maps to
+  row 0 when the row is hidden.
 
 ## Files
 
 New:
 - `src/activities/network/PulpSyncActivity.{h,cpp}` — the sync screen / state machine
-- `src/network/PulpConfig.{h,cpp}` — URL resolution, auto-sync gate + RTC-memory stamp
+- `src/network/PulpConfig.{h,cpp}` — URL resolution, auto-sync gate + RTC-memory stamp, `opdsBrowserSuperseded()`
 - `src/network/PulpShelf.{h,cpp}` — `/api/shelf` fetch through `StreamingJsonParser`
 - `lib/hal/HalFileTime.{h,cpp}` — SdFat timestamp callback
 - `src/activities/hn/HnFeedActivity.{h,cpp}` — the tabbed front page
