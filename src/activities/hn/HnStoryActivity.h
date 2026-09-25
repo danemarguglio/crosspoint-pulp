@@ -12,7 +12,7 @@
 // and the threaded comments, both paged to the e-ink screen.
 //
 // Navigation is a single ring the side buttons walk: the toolbar buttons
-// (Article · Comments · Save · Next thread · ‹ page · page ›) followed by the
+// (Save · Next thread · ‹ page · page › · Article · Comments) followed by the
 // body items of the current page (one per comment in Comments, one for the
 // whole page in Article). Down past the last body item turns the page; Up from
 // the first body item climbs into the toolbar. Confirm activates the focused
@@ -20,6 +20,14 @@
 // taps the same targets; a left/right swipe pages; the back gesture returns to
 // the feed. Everything is therefore reachable on the X4 Pro's two side keys
 // plus the power-click Confirm.
+//
+// Chrome (title, meta, toolbar) shows on entry so the toolbar is discoverable
+// and hides on the first page turn, giving the whole screen to text. It comes
+// back with an upward swipe (the top-edge downward swipe belongs to the
+// firmware's control center), with Up from the first body item, or with a
+// long Confirm press; the next page turn hides it again. Hiding does not
+// change the column width, so line breaks are identical either way — the page
+// is re-laid from the same first word into the taller area.
 //
 // Memory: one API page of comments (40) is resident at a time; a screen page
 // is laid out from a cursor into the flattened depth-first order, and turning
@@ -102,6 +110,7 @@ class HnStoryActivity final : public Activity {
   const char* errorMessage = nullptr;
   bool loadRequested = false;
   int focus = TOOL_COUNT;  // ring position: < TOOL_COUNT toolbar, else body item
+  bool chromeVisible = true;
   int pageTurns = 0;
   bool fullRefreshPending = false;
   bool busy = false;  // blocking fetch in progress: render shows the Loading popup
@@ -114,7 +123,9 @@ class HnStoryActivity final : public Activity {
   int articleLineHeight = 0;
   int commentLineHeight = 0;
   int metaLineHeight = 0;
-  int bodyTop = 0;
+  int bodyTop = 0;  // chromeBodyTop or bareBodyTop, by chromeVisible
+  int chromeBodyTop = 0;
+  int bareBodyTop = 0;
   int bodyBottom = 0;
   int bodyLeft = 0;
   int bodyWidth = 0;
@@ -159,6 +170,11 @@ class HnStoryActivity final : public Activity {
 
   // --- actions ---------------------------------------------------------------
   void switchView(View next);
+  // Show/hide the header + toolbar and re-lay the current page from its
+  // remembered start into the new body height.
+  void setChrome(bool visible);
+  // Page turns hide the chrome without a relayout (the turn lays out anyway).
+  void hideChromeForPage();
   void nextPage();
   void prevPage();
   void nextTopLevel();

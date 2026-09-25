@@ -81,6 +81,18 @@ Branch: `pulp` off upstream `develop` @ `4b17a7bb` (version 1.6.5). Build target
   walk the ring (toolbar buttons, then body items); Down past the last body
   item = next page, Up from the first = toolbar; a held side key pages; taps
   hit the same targets; swipe left/right pages; back gesture = feed.
+- **Immersive reading** (2026-09-25): the title/meta/toolbar block shows on
+  entry and hides on the first page turn, giving the text the whole 800 px
+  minus the footer line (thread lines stay in Comments). Back: swipe up
+  (anywhere, bottom edge included — the top-edge down swipe is the
+  control center), Up from the first body item, or a long Confirm press on
+  boards with a front Confirm key. Any page turn hides it again; a downward
+  swipe hides it too. Hiding keeps the column width, so line breaks are
+  identical and the current page is re-laid from the same first word into the
+  taller area (later page boundaries move; the page counter counts page
+  starts). Article body is ragged-right with hyphenation regardless of the
+  reader's justify setting; comment bodies follow the reader's point size in
+  the sans family, the article the reader's own font.
 - **Memory**: heap (+PSRAM) logged on entering each screen and after every
   fetch (`HN` tag). Fetches refuse below 28 KB free / 8 KB max block
   (`hn::MIN_FETCH_*` — plain http, so no TLS record buffer; the socket, the

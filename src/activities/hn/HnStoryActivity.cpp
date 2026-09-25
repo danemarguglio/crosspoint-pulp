@@ -17,6 +17,25 @@
 
 namespace {
 constexpr unsigned long PAGE_HOLD_MS = 500;
+constexpr unsigned long CHROME_HOLD_MS = 700;
+
+// Same point size as the reader's built-in font, in the sans family, for
+// comment bodies; the article keeps the reader's own family.
+int sansAt(const int readerFontId) {
+  switch (readerFontId) {
+    case NOTOSERIF_12_FONT_ID:
+    case NOTOSANS_12_FONT_ID:
+      return NOTOSANS_12_FONT_ID;
+    case NOTOSERIF_16_FONT_ID:
+    case NOTOSANS_16_FONT_ID:
+      return NOTOSANS_16_FONT_ID;
+    case NOTOSERIF_18_FONT_ID:
+    case NOTOSANS_18_FONT_ID:
+      return NOTOSANS_18_FONT_ID;
+    default:
+      return NOTOSANS_14_FONT_ID;
+  }
+}
 
 const char* toolLabel(const int tool) {
   switch (tool) {
@@ -94,7 +113,8 @@ void HnStoryActivity::computeGeometry() {
   const auto present = [&fonts, this](const int id) { return fonts.count(id) > 0 && !renderer.isSdCardFont(id); };
   articleFontId = SETTINGS.getReaderFontId();
   if (!present(articleFontId)) articleFontId = present(NOTOSANS_14_FONT_ID) ? NOTOSANS_14_FONT_ID : UI_12_FONT_ID;
-  commentFontId = present(NOTOSANS_14_FONT_ID) ? NOTOSANS_14_FONT_ID : UI_12_FONT_ID;
+  commentFontId = sansAt(articleFontId);
+  if (!present(commentFontId)) commentFontId = UI_12_FONT_ID;
   articleLineHeight = std::max(1, renderer.getLineHeight(articleFontId, SETTINGS.getReaderLineCompression()));
   commentLineHeight = std::max(1, renderer.getLineHeight(commentFontId));
   metaLineHeight = std::max(1, renderer.getLineHeight(SMALL_FONT_ID));
@@ -103,7 +123,9 @@ void HnStoryActivity::computeGeometry() {
   const int titleLineHeight = renderer.getLineHeight(UI_12_FONT_ID);
   headerBottom = metrics.topPadding + static_cast<int>(titleLines.size()) * titleLineHeight + metaLineHeight +
                  metrics.verticalSpacing / 2;
-  bodyTop = headerBottom + TOOLBAR_HEIGHT + metrics.verticalSpacing;
+  chromeBodyTop = headerBottom + TOOLBAR_HEIGHT + metrics.verticalSpacing;
+  bareBodyTop = metrics.topPadding + metrics.verticalSpacing;
+  bodyTop = chromeVisible ? chromeBodyTop : bareBodyTop;
   bodyBottom = screenH - metrics.buttonHintsHeight - metaLineHeight - metrics.verticalSpacing / 2;
 }
 
@@ -221,7 +243,9 @@ void HnStoryActivity::layoutArticlePage(const ArticleCursor start) {
   articleLines.clear();
   articleLineY.clear();
   articleAtEnd = false;
-  const bool justify = SETTINGS.paragraphAlignment != CrossPointSettings::LEFT_ALIGN;
+  // Ragged right regardless of the reader's justify setting: a 440 px column
+  // at 14–18 pt justifies into rivers. Hyphenation closes the worst gaps.
+  constexpr bool justify = false;
   const int paragraphGap = articleLineHeight / 2;
 
   int y = bodyTop;
@@ -229,7 +253,8 @@ void HnStoryActivity::layoutArticlePage(const ArticleCursor start) {
   uint16_t skip = start.line;
   while (p < article.paragraphs.size()) {
     hn::Lines lines;
-    hn::layoutParagraph(renderer, articleFontId, bodyWidth, article.paragraphs[p], justify, lines);
+    hn::layoutParagraph(renderer, articleFontId, bodyWidth, article.paragraphs[p], justify, lines,
+                        /*hyphenate=*/true);
     size_t i = skip;
     skip = 0;
     if (i >= lines.size()) {
@@ -403,12 +428,39 @@ void HnStoryActivity::switchView(const View next) {
   requestUpdate();
 }
 
+void HnStoryActivity::hideChromeForPage() {
+  if (!chromeVisible) return;
+  chromeVisible = false;
+  bodyTop = bareBodyTop;
+  fullRefreshPending = true;
+}
+
+void HnStoryActivity::setChrome(const bool visible) {
+  if (visible == chromeVisible) return;
+  chromeVisible = visible;
+  bodyTop = visible ? chromeBodyTop : bareBodyTop;
+  if (!visible && focus < TOOL_COUNT) focus = TOOL_COUNT;
+  if (state == State::READY) {
+    // Width is unchanged, so the remembered page start is the same first word;
+    // only how much fits below it changes.
+    RenderLock lock(*this);
+    if (view == View::ARTICLE) {
+      if (!articlePages.empty()) layoutArticlePage(articlePages.back());
+    } else if (!commentPages.empty()) {
+      layoutCommentPage(commentPages.back());
+    }
+  }
+  fullRefreshPending = true;
+  requestUpdate();
+}
+
 void HnStoryActivity::nextPage() {
   if (view == View::ARTICLE) {
     if (articleAtEnd) {
       showToast(tr(STR_HN_END_OF_ARTICLE));
       return;
     }
+    hideChromeForPage();
     RenderLock lock(*this);
     const ArticleCursor next = articleNext;
     layoutArticlePage(next);
@@ -430,6 +482,7 @@ void HnStoryActivity::nextPage() {
       busy = true;
       requestUpdateAndWait();
     }
+    hideChromeForPage();
     RenderLock lock(*this);
     layoutCommentPage(next);
     busy = false;
@@ -449,6 +502,7 @@ void HnStoryActivity::nextPage() {
 void HnStoryActivity::prevPage() {
   if (view == View::ARTICLE) {
     if (articlePages.size() <= 1) return;
+    hideChromeForPage();
     RenderLock lock(*this);
     articlePages.pop_back();
     layoutArticlePage(articlePages.back());
@@ -460,6 +514,7 @@ void HnStoryActivity::prevPage() {
       busy = true;
       requestUpdateAndWait();
     }
+    hideChromeForPage();
     RenderLock lock(*this);
     commentPages.pop_back();
     layoutCommentPage(prev);
@@ -501,6 +556,7 @@ void HnStoryActivity::nextTopLevel() {
     return;
   }
   const CommentCursor next{flat, 0};
+  hideChromeForPage();
   layoutCommentPage(next);
   busy = false;
   if (!entries.empty()) commentPages.push_back(next);
@@ -570,6 +626,14 @@ void HnStoryActivity::moveFocus(const int delta) {
     }
     focus++;
   } else {
+    if (focus == TOOL_COUNT && !chromeVisible) {
+      // Chrome hidden: the ring's toolbar half is off-screen; bring it back
+      // and land on its last button instead of walking into nothing.
+      setChrome(true);
+      focus = TOOL_COUNT - 1;
+      requestUpdate();
+      return;
+    }
     if (focus <= 0) return;
     focus--;
   }
@@ -577,7 +641,7 @@ void HnStoryActivity::moveFocus(const int delta) {
 }
 
 bool HnStoryActivity::handleTap(const int x, const int y) {
-  for (int tool = 0; tool < TOOL_COUNT; tool++) {
+  for (int tool = 0; chromeVisible && tool < TOOL_COUNT; tool++) {
     int tx = 0;
     int ty = 0;
     int tw = 0;
@@ -637,6 +701,12 @@ void HnStoryActivity::loop() {
     return;
   }
 
+  // Button-only chrome toggle (boards with a front Confirm key; on the X4 Pro
+  // the power click has no hold, so Up from the first body item does it).
+  if (mappedInput.wasLongPressed(MappedInputManager::Button::Confirm, CHROME_HOLD_MS)) {
+    setChrome(!chromeVisible);
+    return;
+  }
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     activateFocus();
     return;
@@ -674,6 +744,17 @@ void HnStoryActivity::loop() {
   }
   if (swipe == MappedInputManager::SwipeDir::Right) {
     prevPage();
+    return;
+  }
+  // Upward swipe (the bottom-edge one included) brings the chrome back; a
+  // downward swipe hides it. The top-edge downward swipe never reaches here —
+  // ActivityManager opens the control center on it first.
+  if (swipe == MappedInputManager::SwipeDir::Up) {
+    setChrome(true);
+    return;
+  }
+  if (swipe == MappedInputManager::SwipeDir::Down) {
+    setChrome(false);
     return;
   }
   int x = 0;
@@ -793,7 +874,7 @@ void HnStoryActivity::drawFooter() const {
 
 void HnStoryActivity::render(RenderLock&&) {
   renderer.clearScreen();
-  drawHeader();
+  if (chromeVisible || state != State::READY) drawHeader();
 
   if (state == State::LOADING || state == State::ERROR) {
     const int mid = (bodyTop + bodyBottom) / 2;
@@ -808,7 +889,7 @@ void HnStoryActivity::render(RenderLock&&) {
     return;
   }
 
-  drawToolbar();
+  if (chromeVisible) drawToolbar();
   if (view == View::ARTICLE) {
     drawArticle();
   } else {

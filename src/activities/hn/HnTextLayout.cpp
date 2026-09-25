@@ -25,7 +25,7 @@ void splitParagraphs(const std::string_view text, std::vector<std::string_view>&
 }
 
 bool layoutParagraph(const GfxRenderer& renderer, const int fontId, const int width, const std::string_view paragraph,
-                     const bool justify, Lines& outLines) {
+                     const bool justify, Lines& outLines, const bool hyphenate) {
   if (width <= 0 || paragraph.empty()) return true;
 
   BlockStyle style;
@@ -33,7 +33,7 @@ bool layoutParagraph(const GfxRenderer& renderer, const int fontId, const int wi
   style.textAlignDefined = true;
   // No extra paragraph spacing or focus reading here: the screens space
   // paragraphs themselves, and comments read better plain.
-  ParsedText parsed(false, false, false, style);
+  ParsedText parsed(false, hyphenate, false, style);
 
   std::string word;
   word.reserve(24);

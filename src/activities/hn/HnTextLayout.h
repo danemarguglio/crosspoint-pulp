@@ -23,6 +23,6 @@ void splitParagraphs(std::string_view text, std::vector<std::string_view>& out);
 // ASCII whitespace; ParsedText handles NFC/CJK/RTL. Appends to `outLines`.
 // Returns false when a line failed to allocate (the paragraph is cut there).
 bool layoutParagraph(const GfxRenderer& renderer, int fontId, int width, std::string_view paragraph, bool justify,
-                     Lines& outLines);
+                     Lines& outLines, bool hyphenate = false);
 
 }  // namespace hn
