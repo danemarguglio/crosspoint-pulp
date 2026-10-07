@@ -1,3 +1,19 @@
+# CrossPoint Reader — Pulp fork
+
+> **This is a personal fork**, not upstream CrossPoint. It adds features for the Xteink X4 Pro
+> that pull reading material from a self-hosted **pulp** server
+> (Safari tabs → EPUB, plus a Hacker News proxy): a *Pulp* sync menu item and auto-sync on wake,
+> newest-first file browsing with real SD file dates, and a *Hacker News* reader with threaded comments.
+> Without a pulp server those menu items stay hidden and it behaves like stock CrossPoint.
+>
+> - What changed and why: [`PULP-FORK.md`](PULP-FORK.md) (branch `pulp`, based on upstream `develop` 1.6.5)
+> - Build: `pio run -e x4pro`. Only the X4 Pro target has been tested.
+> - Unofficial and use at your own risk. Please report issues with the fork here, not upstream.
+>
+> Upstream: [crosspoint-reader/crosspoint-reader](https://github.com/crosspoint-reader/crosspoint-reader). Upstream's README follows.
+
+---
+
 # CrossPoint Reader
 
 [![Fund contributors](https://img.shields.io/badge/%F0%9F%91%91_Fund_contributors-royalty.dev-BB953A?style=for-the-badge&labelColor=1a1a1a)](https://app.royalty.dev/crosspoint-reader/crosspoint-reader)
